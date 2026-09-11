@@ -26,6 +26,16 @@
 #endif /* DT_HAS_COMPAT_STATUS_OKAY(nordic_nrf_pwr_antswc) */
 #endif /* DT_HAS_COMPAT_STATUS_OKAY */
 
+/* PORTCNF.PWRCTRL of GPIO port 4. It selects where the floating ground of the P4 pins sits, in
+ * other words whether the pins run in 1.8 V or 3.3 V mode. The register is not exposed by the MDK
+ * yet, so it is defined here.
+ * P4 is powered on by default so that the pins work out of the box, but that costs roughly 40 uA
+ * of constant current, also in System OFF. The port is therefore powered off again when P4 is not
+ * enabled in devicetree.
+ */
+#define P4_PWRCTRL_REG (NRF_P4_S_BASE + 0x34UL)
+#define P4_PWRCTRL_OFF (0x0UL)
+
 /* This handler needs to be ported to the upstream TF-M project when Cracen is supported there.
  * The implementation of this is currently in sdk-nrf. We define it to avoid warnings when we build
  * the target_cfg.c file which is the same for both upsteam TF-M and sdk-nrf.
@@ -61,6 +71,13 @@ int soc_early_init_hook(void){
 	*(volatile uint32_t *)PWR_ANTSWC_REG |= PWR_ANTSWC_ENABLE;
 #endif /* DT_HAS_COMPAT_STATUS_OKAY(nordic_nrf_pwr_antswc) */
 #endif /* DT_HAS_COMPAT_STATUS_OKAY */
+
+#ifdef DT_NODE_HAS_STATUS_OKAY
+#if DT_NODE_EXISTS(DT_NODELABEL(gpio4)) && !DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio4))
+	/* P4 is powered on by default and draws roughly 40 uA when unused */
+	*(volatile uint32_t *)P4_PWRCTRL_REG = P4_PWRCTRL_OFF;
+#endif /* !DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio4)) */
+#endif /* DT_NODE_HAS_STATUS_OKAY */
 
 	/* Configure LFXO capacitive load if internal load capacitors are used */
 #ifdef DT_ENUM_HAS_VALUE
